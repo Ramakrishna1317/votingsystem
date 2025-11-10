@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon.png" type="image/png">
+    <title>Voter Portal - Online Voting System</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body class="dashboard">
+    <nav class="navbar">
+        <div class="navbar-brand">🗳️ Voter Portal</div>
+        <div class="navbar-user">
+            <span id="voterName">Voter</span>
+            <button class="btn btn-secondary" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="dashboard-content">
+        <div class="page-header">
+            <h1>Active Elections</h1>
+            <p>Cast your vote in ongoing elections</p>
+        </div>
+
+        <div id="electionsContainer"></div>
+    </div>
+
+    <!-- Vote Confirmation Modal -->
+    <div id="voteConfirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Confirm Your Vote</h2>
+                <button class="modal-close" onclick="Utils.hideModal('voteConfirmModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>You are about to vote for:</p>
+                <div style="text-align: center; margin: 2rem 0;">
+                    <div id="confirmCandidatePhoto" style="font-size: 4rem; margin-bottom: 1rem;"></div>
+                    <h3 id="confirmCandidateName"></h3>
+                    <p id="confirmElectionTitle" style="color: var(--text-secondary);"></p>
+                </div>
+                <p style="color: var(--danger-color); font-weight: 500;">⚠️ This action cannot be undone. You can only vote once per election.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Utils.hideModal('voteConfirmModal')">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="confirmVote()">Confirm Vote</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="voteSuccessModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Vote Submitted Successfully!</h2>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; padding: 2rem 0;">
+                    <div style="font-size: 5rem; color: var(--success-color);">✓</div>
+                    <h3 style="margin-top: 1rem;">Thank you for voting!</h3>
+                    <p style="color: var(--text-secondary); margin-top: 1rem;">Your vote has been recorded securely.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeSuccessModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./data.js"></script>
+    <script src="./utils.js"></script>
+    <script src="./script.js"></script>
+    <script>
+        // Voter page initialization
+        if (!Utils.requireAuth('voter')) {
+            throw new Error('Unauthorized');
+        }
+
+        const user = Utils.getSession();
+        document.getElementById('voterName').textContent = user.fullName;
+
+        let selectedVote = null;
+
+        function loadElections() {
+            const elections = window.dataManager.getActiveElections();
+            const container = document.getElementById('electionsContainer');
+            container.innerHTML = '';
+
+            if (elections.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <h3>No Active Elections</h3>
+                        <p>There are no elections available for voting at this time.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            elections.forEach(election => {
+                const hasVoted = window.dataManager.hasVoted(user.id, election.id);
+                const candidates = window.dataManager.getCandidatesByElection(election.id);
+                const status = Utils.getElectionStatus(election);
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div>
+                            <h2>${Utils.sanitizeInput(election.title)}</h2>
+                            <p style="color: var(--text-secondary); margin-top: 0.5rem;">${Utils.sanitizeInput(election.description)}</p>
+                        </div>
+                        <span class="badge ${Utils.getStatusBadgeClass(status)}">${status}</span>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; color: var(--text-secondary);">
+                            <span>📅 Ends: ${Utils.formatDate(election.endDate)}</span>
+                            <span>⏱️ ${Utils.getTimeRemaining(election.endDate)}</span>
+                        </div>
+                        ${hasVoted ? `
+                            <div style="background: rgba(16, 185, 129, 0.1); padding: 1rem; border-radius: 6px; text-align: center; color: var(--success-color);">
+                                <strong>✓ You have already voted in this election</strong>
+                                <br>
+                                <button class="btn btn-secondary mt-2" onclick="viewResults('${election.id}')">View Results</button>
+                            </div>
+                        ` : status === 'active' ? `
+                            <h3 style="margin-bottom: 1rem;">Select Your Candidate:</h3>
+                            <div class="candidates-grid" id="candidates_${election.id}"></div>
+                            <button class="btn btn-primary mt-3" style="width: 100%;" onclick="submitVote('${election.id}')" id="voteBtn_${election.id}" disabled>Cast Vote</button>
+                        ` : `
+                            <div style="background: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 6px; text-align: center; color: var(--danger-color);">
+                                <strong>This election has ended</strong>
+                                <br>
+                                <button class="btn btn-secondary mt-2" onclick="viewResults('${election.id}')">View Results</button>
+                            </div>
+                        `}
+                    </div>
+                `;
+                container.appendChild(card);
+
+                // Load candidates if not voted and election is active
+                if (!hasVoted && status === 'active') {
+                    loadCandidates(election.id, candidates);
+                }
+            });
+        }
+
+        function loadCandidates(electionId, candidates) {
+            const container = document.getElementById(`candidates_${electionId}`);
+            if (!container) return;
+
+            candidates.forEach(candidate => {
+                const card = document.createElement('div');
+                card.className = 'candidate-card';
+                card.onclick = () => selectCandidate(electionId, candidate);
+                card.innerHTML = `
+                    <div class="candidate-photo">${candidate.photo}</div>
+                    <h3>${Utils.sanitizeInput(candidate.name)}</h3>
+                    <p>${Utils.sanitizeInput(candidate.manifesto)}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        window.selectCandidate = function(electionId, candidate) {
+            // Deselect all candidates in this election
+            const container = document.getElementById(`candidates_${electionId}`);
+            container.querySelectorAll('.candidate-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Select this candidate
+            event.currentTarget.classList.add('selected');
+
+            // Enable vote button
+            document.getElementById(`voteBtn_${electionId}`).disabled = false;
+
+            // Store selection
+            selectedVote = {
+                electionId: electionId,
+                candidateId: candidate.id,
+                candidateName: candidate.name,
+                candidatePhoto: candidate.photo
+            };
+        };
+
+        window.submitVote = function(electionId) {
+            if (!selectedVote || selectedVote.electionId !== electionId) {
+                alert('Please select a candidate first');
+                return;
+            }
+
+            const election = window.dataManager.getElectionById(electionId);
+            
+            // Show confirmation modal
+            document.getElementById('confirmCandidatePhoto').textContent = selectedVote.candidatePhoto;
+            document.getElementById('confirmCandidateName').textContent = selectedVote.candidateName;
+            document.getElementById('confirmElectionTitle').textContent = election.title;
+            Utils.showModal('voteConfirmModal');
+        };
+
+        window.confirmVote = function() {
+            try {
+                window.dataManager.castVote({
+                    userId: user.id,
+                    electionId: selectedVote.electionId,
+                    candidateId: selectedVote.candidateId
+                });
+
+                Utils.logAction('VOTE_CAST', {
+                    electionId: selectedVote.electionId,
+                    candidateId: selectedVote.candidateId
+                });
+
+                Utils.hideModal('voteConfirmModal');
+                Utils.showModal('voteSuccessModal');
+                
+                selectedVote = null;
+            } catch (error) {
+                alert(error.message);
+                Utils.hideModal('voteConfirmModal');
+            }
+        };
+
+        window.closeSuccessModal = function() {
+            Utils.hideModal('voteSuccessModal');
+            loadElections();
+        };
+
+        window.viewResults = function(electionId) {
+            window.location.href = `results.html?election=${electionId}`;
+        };
+
+        // Initialize
+        loadElections();
+    </script>
+</body>
+</html>

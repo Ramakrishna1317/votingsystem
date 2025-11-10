@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon.png" type="image/png">
+    <title>Online Voting System - Login</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>🗳️ Online Voting System</h1>
+                <p>Secure, Transparent, Democratic</p>
+            </div>
+            
+            <div class="login-box">
+                <h2>Login</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required autocomplete="username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required autocomplete="current-password">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="role">Login As</label>
+                        <select id="role" name="role" required>
+                            <option value="voter">Voter</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    
+                    <div id="errorMessage" class="error-message"></div>
+                    
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+                
+                <div class="demo-credentials">
+                    <h3>Demo Credentials</h3>
+                    <p><strong>Admin:</strong> admin / admin123</p>
+                    <p><strong>Voter:</strong> voter1 / pass123</p>
+                    <p><strong>Voter:</strong> voter2 / pass123</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="./data.js"></script>
+    <script src="./utils.js"></script>
+    <script src="./script.js"></script>
+</body>
+</html>

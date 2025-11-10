@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon.png" type="image/png">
+    <title>Admin Dashboard - Online Voting System</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body class="dashboard">
+    <nav class="navbar">
+        <div class="navbar-brand">🗳️ Admin Dashboard</div>
+        <div class="navbar-user">
+            <span id="adminName">Administrator</span>
+            <button class="btn btn-secondary" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="dashboard-content">
+        <div class="page-header">
+            <h1>Dashboard Overview</h1>
+            <p>Manage elections, candidates, and voters</p>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon primary">📊</div>
+                <div class="stat-content">
+                    <h3 id="totalElections">0</h3>
+                    <p>Total Elections</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon success">👥</div>
+                <div class="stat-content">
+                    <h3 id="totalCandidates">0</h3>
+                    <p>Total Candidates</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon warning">🗳️</div>
+                <div class="stat-content">
+                    <h3 id="totalVotes">0</h3>
+                    <p>Total Votes Cast</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon danger">👤</div>
+                <div class="stat-content">
+                    <h3 id="totalVoters">0</h3>
+                    <p>Registered Voters</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('elections')">Elections</button>
+            <button class="tab" onclick="switchTab('candidates')">Candidates</button>
+            <button class="tab" onclick="switchTab('voters')">Voters</button>
+            <button class="tab" onclick="switchTab('audit')">Audit Logs</button>
+        </div>
+
+        <!-- Elections Tab -->
+        <div id="electionsTab" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Elections Management</h2>
+                    <button class="btn btn-primary" onclick="showAddElectionModal()">+ Add Election</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="electionsTable">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Status</th>
+                                    <th>Votes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Candidates Tab -->
+        <div id="candidatesTab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Candidates Management</h2>
+                    <button class="btn btn-primary" onclick="showAddCandidateModal()">+ Add Candidate</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="candidatesTable">
+                            <thead>
+                                <tr>
+                                    <th>Photo</th>
+                                    <th>Name</th>
+                                    <th>Election</th>
+                                    <th>Manifesto</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Voters Tab -->
+        <div id="votersTab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Voters Management</h2>
+                    <button class="btn btn-primary" onclick="showAddVoterModal()">+ Add Voter</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="votersTable">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Full Name</th>
+                                    <th>Email</th>
+                                    <th>Registered</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Logs Tab -->
+        <div id="auditTab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Audit Logs</h2>
+                    <button class="btn btn-secondary" onclick="exportAuditLogs()">Export Logs</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="auditTable">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Election Modal -->
+    <div id="addElectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Election</h2>
+                <button class="modal-close" onclick="Utils.hideModal('addElectionModal')">&times;</button>
+            </div>
+            <form id="addElectionForm">
+                <div class="form-group">
+                    <label for="electionTitle">Election Title</label>
+                    <input type="text" id="electionTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="electionDescription">Description</label>
+                    <textarea id="electionDescription" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="electionStartDate">Start Date</label>
+                    <input type="datetime-local" id="electionStartDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="electionEndDate">End Date</label>
+                    <input type="datetime-local" id="electionEndDate" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="Utils.hideModal('addElectionModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Election</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Candidate Modal -->
+    <div id="addCandidateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Candidate</h2>
+                <button class="modal-close" onclick="Utils.hideModal('addCandidateModal')">&times;</button>
+            </div>
+            <form id="addCandidateForm">
+                <div class="form-group">
+                    <label for="candidateElection">Select Election</label>
+                    <select id="candidateElection" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="candidateName">Candidate Name</label>
+                    <input type="text" id="candidateName" required>
+                </div>
+                <div class="form-group">
+                    <label for="candidatePhoto">Photo Emoji</label>
+                    <input type="text" id="candidatePhoto" placeholder="👤" maxlength="2" required>
+                </div>
+                <div class="form-group">
+                    <label for="candidateManifesto">Manifesto</label>
+                    <textarea id="candidateManifesto" rows="4" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="Utils.hideModal('addCandidateModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Candidate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Voter Modal -->
+    <div id="addVoterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Voter</h2>
+                <button class="modal-close" onclick="Utils.hideModal('addVoterModal')">&times;</button>
+            </div>
+            <form id="addVoterForm">
+                <div class="form-group">
+                    <label for="voterUsername">Username</label>
+                    <input type="text" id="voterUsername" required>
+                </div>
+                <div class="form-group">
+                    <label for="voterPassword">Password</label>
+                    <input type="password" id="voterPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="voterFullName">Full Name</label>
+                    <input type="text" id="voterFullName" required>
+                </div>
+                <div class="form-group">
+                    <label for="voterEmail">Email</label>
+                    <input type="email" id="voterEmail" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="Utils.hideModal('addVoterModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Voter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="./data.js"></script>
+    <script src="./utils.js"></script>
+    <script src="./script.js"></script>
+    <script>
+        // Admin page initialization
+        if (!Utils.requireAuth('admin')) {
+            throw new Error('Unauthorized');
+        }
+
+        const user = Utils.getSession();
+        document.getElementById('adminName').textContent = user.fullName;
+
+        // Load dashboard data
+        function loadDashboard() {
+            loadStatistics();
+            loadElections();
+            loadCandidates();
+            loadVoters();
+            loadAuditLogs();
+        }
+
+        function loadStatistics() {
+            const elections = window.dataManager.getElections();
+            const candidates = window.dataManager.getCandidates();
+            const votes = window.dataManager.getVotes();
+            const users = window.dataManager.getUsers();
+            const voters = users.filter(u => u.role === 'voter');
+
+            document.getElementById('totalElections').textContent = elections.length;
+            document.getElementById('totalCandidates').textContent = candidates.length;
+            document.getElementById('totalVotes').textContent = votes.length;
+            document.getElementById('totalVoters').textContent = voters.length;
+        }
+
+        function loadElections() {
+            const elections = window.dataManager.getElections();
+            const tbody = document.querySelector('#electionsTable tbody');
+            tbody.innerHTML = '';
+
+            if (elections.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No elections found</td></tr>';
+                return;
+            }
+
+            elections.forEach(election => {
+                const votes = window.dataManager.getVotesByElection(election.id);
+                const status = Utils.getElectionStatus(election);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${Utils.sanitizeInput(election.title)}</td>
+                    <td>${Utils.formatDate(election.startDate)}</td>
+                    <td>${Utils.formatDate(election.endDate)}</td>
+                    <td><span class="badge ${Utils.getStatusBadgeClass(status)}">${status}</span></td>
+                    <td>${votes.length}</td>
+                    <td>
+                        <button class="btn btn-secondary" onclick="viewResults('${election.id}')">Results</button>
+                        <button class="btn btn-danger" onclick="deleteElection('${election.id}')">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function loadCandidates() {
+            const candidates = window.dataManager.getCandidates();
+            const elections = window.dataManager.getElections();
+            const tbody = document.querySelector('#candidatesTable tbody');
+            tbody.innerHTML = '';
+
+            if (candidates.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No candidates found</td></tr>';
+                return;
+            }
+
+            candidates.forEach(candidate => {
+                const election = elections.find(e => e.id === candidate.electionId);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="font-size: 2rem;">${candidate.photo}</td>
+                    <td>${Utils.sanitizeInput(candidate.name)}</td>
+                    <td>${election ? Utils.sanitizeInput(election.title) : 'N/A'}</td>
+                    <td>${Utils.sanitizeInput(candidate.manifesto).substring(0, 100)}...</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteCandidate('${candidate.id}')">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function loadVoters() {
+            const users = window.dataManager.getUsers();
+            const voters = users.filter(u => u.role === 'voter');
+            const tbody = document.querySelector('#votersTable tbody');
+            tbody.innerHTML = '';
+
+            if (voters.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No voters found</td></tr>';
+                return;
+            }
+
+            voters.forEach(voter => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${Utils.sanitizeInput(voter.username)}</td>
+                    <td>${Utils.sanitizeInput(voter.fullName)}</td>
+                    <td>${Utils.sanitizeInput(voter.email)}</td>
+                    <td>${Utils.formatDate(voter.createdAt)}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteVoter('${voter.id}')">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function loadAuditLogs() {
+            const logs = window.dataManager.getRecentAuditLogs(100);
+            const tbody = document.querySelector('#auditTable tbody');
+            tbody.innerHTML = '';
+
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No audit logs found</td></tr>';
+                return;
+            }
+
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${Utils.formatDateTime(log.timestamp)}</td>
+                    <td>${Utils.sanitizeInput(log.username)}</td>
+                    <td>${Utils.sanitizeInput(log.action)}</td>
+                    <td>${JSON.stringify(log.details)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Tab switching
+        window.switchTab = function(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        };
+
+        // Modal functions
+        window.showAddElectionModal = function() {
+            Utils.showModal('addElectionModal');
+        };
+
+        window.showAddCandidateModal = function() {
+            const elections = window.dataManager.getElections();
+            const select = document.getElementById('candidateElection');
+            select.innerHTML = elections.map(e => 
+                `<option value="${e.id}">${Utils.sanitizeInput(e.title)}</option>`
+            ).join('');
+            Utils.showModal('addCandidateModal');
+        };
+
+        window.showAddVoterModal = function() {
+            Utils.showModal('addVoterModal');
+        };
+
+        // Form submissions
+        document.getElementById('addElectionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const election = {
+                title: document.getElementById('electionTitle').value,
+                description: document.getElementById('electionDescription').value,
+                startDate: new Date(document.getElementById('electionStartDate').value).toISOString(),
+                endDate: new Date(document.getElementById('electionEndDate').value).toISOString(),
+                status: 'active',
+                createdBy: user.id
+            };
+            
+            window.dataManager.addElection(election);
+            Utils.logAction('ELECTION_CREATED', { title: election.title });
+            Utils.hideModal('addElectionModal');
+            this.reset();
+            loadDashboard();
+        });
+
+        document.getElementById('addCandidateForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const candidate = {
+                electionId: document.getElementById('candidateElection').value,
+                name: document.getElementById('candidateName').value,
+                photo: document.getElementById('candidatePhoto').value,
+                manifesto: document.getElementById('candidateManifesto').value
+            };
+            
+            window.dataManager.addCandidate(candidate);
+            Utils.logAction('CANDIDATE_ADDED', { name: candidate.name });
+            Utils.hideModal('addCandidateModal');
+            this.reset();
+            loadDashboard();
+        });
+
+        document.getElementById('addVoterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const voter = {
+                username: document.getElementById('voterUsername').value,
+                password: document.getElementById('voterPassword').value,
+                fullName: document.getElementById('voterFullName').value,
+                email: document.getElementById('voterEmail').value,
+                role: 'voter'
+            };
+            
+            if (window.dataManager.getUserByUsername(voter.username)) {
+                alert('Username already exists');
+                return;
+            }
+            
+            window.dataManager.addUser(voter);
+            Utils.logAction('VOTER_ADDED', { username: voter.username });
+            Utils.hideModal('addVoterModal');
+            this.reset();
+            loadDashboard();
+        });
+
+        // Delete functions
+        window.deleteElection = function(id) {
+            if (Utils.confirmAction('Are you sure you want to delete this election? This will also delete all associated candidates and votes.')) {
+                const election = window.dataManager.getElectionById(id);
+                window.dataManager.deleteElection(id);
+                Utils.logAction('ELECTION_DELETED', { electionId: id, title: election.title });
+                loadDashboard();
+            }
+        };
+
+        window.deleteCandidate = function(id) {
+            if (Utils.confirmAction('Are you sure you want to delete this candidate?')) {
+                const candidate = window.dataManager.getCandidateById(id);
+                window.dataManager.deleteCandidate(id);
+                Utils.logAction('CANDIDATE_DELETED', { candidateId: id, name: candidate.name });
+                loadDashboard();
+            }
+        };
+
+        window.deleteVoter = function(id) {
+            if (Utils.confirmAction('Are you sure you want to delete this voter?')) {
+                const voter = window.dataManager.getUserById(id);
+                window.dataManager.deleteUser(id);
+                Utils.logAction('VOTER_DELETED', { voterId: id, username: voter.username });
+                loadDashboard();
+            }
+        };
+
+        window.viewResults = function(electionId) {
+            window.location.href = `results.html?election=${electionId}`;
+        };
+
+        window.exportAuditLogs = function() {
+            const logs = window.dataManager.getAuditLogs();
+            Utils.exportToJSON(logs, 'audit_logs_' + new Date().toISOString().split('T')[0] + '.json');
+        };
+
+        // Initialize dashboard
+        loadDashboard();
+    </script>
+</body>
+</html>

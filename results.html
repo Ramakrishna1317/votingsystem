@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon.png" type="image/png">
+    <title>Election Results - Online Voting System</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body class="dashboard">
+    <nav class="navbar">
+        <div class="navbar-brand">🗳️ Election Results</div>
+        <div class="navbar-user">
+            <span id="userName">User</span>
+            <button class="btn btn-secondary" onclick="goBack()">Back</button>
+            <button class="btn btn-secondary" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="dashboard-content">
+        <div class="page-header">
+            <h1 id="electionTitle">Election Results</h1>
+            <p id="electionDescription"></p>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Voting Summary</h2>
+                <button class="btn btn-secondary" onclick="exportResults()">Export Results</button>
+            </div>
+            <div class="card-body">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon primary">🗳️</div>
+                        <div class="stat-content">
+                            <h3 id="totalVotes">0</h3>
+                            <p>Total Votes Cast</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon success">👥</div>
+                        <div class="stat-content">
+                            <h3 id="totalCandidates">0</h3>
+                            <p>Total Candidates</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon warning">📊</div>
+                        <div class="stat-content">
+                            <h3 id="electionStatus">Active</h3>
+                            <p>Election Status</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon danger">⏱️</div>
+                        <div class="stat-content">
+                            <h3 id="timeRemaining">-</h3>
+                            <p>Time Remaining</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Results Breakdown</h2>
+            </div>
+            <div class="card-body">
+                <div id="resultsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./data.js"></script>
+    <script src="./utils.js"></script>
+    <script src="./script.js"></script>
+    <script>
+        // Results page initialization
+        if (!Utils.requireAuth()) {
+            throw new Error('Unauthorized');
+        }
+
+        const user = Utils.getSession();
+        document.getElementById('userName').textContent = user.fullName;
+
+        // Get election ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const electionId = urlParams.get('election');
+
+        if (!electionId) {
+            alert('No election specified');
+            goBack();
+        }
+
+        function loadResults() {
+            const election = window.dataManager.getElectionById(electionId);
+            if (!election) {
+                alert('Election not found');
+                goBack();
+                return;
+            }
+
+            // Update election info
+            document.getElementById('electionTitle').textContent = election.title;
+            document.getElementById('electionDescription').textContent = election.description;
+
+            // Get results
+            const results = window.dataManager.getElectionResults(electionId);
+            const status = Utils.getElectionStatus(election);
+
+            // Update stats
+            document.getElementById('totalVotes').textContent = results.totalVotes;
+            document.getElementById('totalCandidates').textContent = results.results.length;
+            document.getElementById('electionStatus').textContent = status.charAt(0).toUpperCase() + status.slice(1);
+            document.getElementById('timeRemaining').textContent = Utils.getTimeRemaining(election.endDate);
+
+            // Display results
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '';
+
+            if (results.results.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <h3>No Results Yet</h3>
+                        <p>No votes have been cast in this election.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            results.results.forEach((result, index) => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+                resultItem.innerHTML = `
+                    <div class="result-header">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="font-size: 2rem;">${result.candidate.photo}</span>
+                            <div>
+                                <h3>${Utils.sanitizeInput(result.candidate.name)}</h3>
+                                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.25rem;">
+                                    ${Utils.sanitizeInput(result.candidate.manifesto).substring(0, 100)}...
+                                </p>
+                            </div>
+                        </div>
+                        <div class="result-votes">
+                            ${result.votes} vote${result.votes !== 1 ? 's' : ''} (${result.percentage}%)
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${result.percentage}%;">
+                            ${result.percentage}%
+                        </div>
+                    </div>
+                    ${index === 0 && result.votes > 0 ? `
+                        <div style="text-align: center; margin-top: 0.5rem; color: var(--success-color); font-weight: 500;">
+                            🏆 Leading Candidate
+                        </div>
+                    ` : ''}
+                `;
+                container.appendChild(resultItem);
+            });
+        }
+
+        window.goBack = function() {
+            if (user.role === 'admin') {
+                window.location.href = 'admin.html';
+            } else {
+                window.location.href = 'voter.html';
+            }
+        };
+
+        window.exportResults = function() {
+            const election = window.dataManager.getElectionById(electionId);
+            const results = window.dataManager.getElectionResults(electionId);
+            
+            const exportData = {
+                election: {
+                    title: election.title,
+                    description: election.description,
+                    startDate: election.startDate,
+                    endDate: election.endDate,
+                    status: Utils.getElectionStatus(election)
+                },
+                results: results,
+                exportedAt: new Date().toISOString(),
+                exportedBy: user.username
+            };
+
+            Utils.exportToJSON(exportData, `election_results_${electionId}_${new Date().toISOString().split('T')[0]}.json`);
+        };
+
+        // Initialize
+        loadResults();
+
+        // Auto-refresh results every 10 seconds if election is active
+        const election = window.dataManager.getElectionById(electionId);
+        if (Utils.getElectionStatus(election) === 'active') {
+            setInterval(loadResults, 10000);
+        }
+    </script>
+</body>
+</html>
