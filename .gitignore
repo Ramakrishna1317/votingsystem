@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Node / environment
+node_modules/
+.env
+npm-debug.log
+yarn-error.log
+coverage/
