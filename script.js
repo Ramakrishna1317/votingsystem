@@ -61,6 +61,22 @@ function initLoginPage() {
         }
     });
 
+    // Password toggle button
+    const toggleBtn = document.getElementById('togglePassword');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const pwd = document.getElementById('password');
+            if (!pwd) return;
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                toggleBtn.textContent = '🔓';
+            } else {
+                pwd.type = 'password';
+                toggleBtn.textContent = '🔒';
+            }
+        });
+    }
+
     // Clear any existing session on login page
     Utils.clearSession();
 }
